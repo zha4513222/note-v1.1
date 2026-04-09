@@ -1,0 +1,42 @@
+server:
+  port: 8082
+
+spring:
+  application:
+    name: note-service
+  datasource:
+    url: jdbc:mysql://localhost:3306/note_db?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true
+    username: root
+    password: root
+    driver-class-name: com.mysql.cj.jdbc.Driver
+
+mybatis-plus:
+  mapper-locations: classpath:mapper/*.xml
+  global-config:
+    db-config:
+      id-type: auto
+    banner: false
+  configuration:
+    map-underscore-to-camel-case: true
+    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
+
+jieba:
+  dict-path: classpath:dict/jieba_dict.txt
+  stop-words-path: classpath:dict/stopwords.txt
+
+jwt:
+  secret: note-service-jwt-secret-key-2024
+  expiration: 86400000
+
+# 标签推荐算法权重配置
+tag:
+  recommend:
+    keyword-match-score: 30
+    user-history-score: 25
+    hot-tag-score: 10
+    recency-score: 5
+    max-results: 5
+
+logging:
+  level:
+    com.example.note: debug

@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.note.repository.TagMapper">
+
+    <resultMap id="BaseResultMap" type="com.example.note.entity.Tag">
+        <id column="id" property="id"/>
+        <result column="name" property="name"/>
+        <result column="use_count" property="useCount"/>
+        <result column="created_at" property="createdAt"/>
+    </resultMap>
+
+    <select id="selectPopular" resultMap="BaseResultMap">
+        SELECT * FROM tag ORDER BY use_count DESC LIMIT #{limit}
+    </select>
+
+    <select id="selectByNoteId" resultMap="BaseResultMap">
+        SELECT t.* FROM tag t
+        INNER JOIN note_tag nt ON t.id = nt.tag_id
+        WHERE nt.note_id = #{noteId}
+    </select>
+
+</mapper>

@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.note.repository.NoteMapper">
+
+    <resultMap id="BaseResultMap" type="com.example.note.entity.Note">
+        <id column="id" property="id"/>
+        <result column="user_id" property="userId"/>
+        <result column="title" property="title"/>
+        <result column="content" property="content"/>
+        <result column="content_text" property="contentText"/>
+        <result column="category_id" property="categoryId"/>
+        <result column="view_count" property="viewCount"/>
+        <result column="like_count" property="likeCount"/>
+        <result column="status" property="status"/>
+        <result column="created_at" property="createdAt"/>
+        <result column="updated_at" property="updatedAt"/>
+    </resultMap>
+
+    <select id="selectByPage" resultMap="BaseResultMap">
+        SELECT * FROM note
+        WHERE status != 3
+        <if test="userId != null">
+            AND user_id = #{userId}
+        </if>
+        <if test="categoryId != null">
+            AND category_id = #{categoryId}
+        </if>
+        <if test="status != null">
+            AND status = #{status}
+        </if>
+        ORDER BY created_at DESC
+    </select>
+
+    <select id="selectFullText" resultMap="BaseResultMap">
+        SELECT * FROM note
+        WHERE status = 2
+        AND (title LIKE CONCAT('%', #{keyword}, '%')
+             OR content_text LIKE CONCAT('%', #{keyword}, '%'))
+        ORDER BY created_at DESC
+    </select>
+
+</mapper>
