@@ -93,14 +93,9 @@ public class StatsController {
 
     @GetMapping("/tags/usage")
     public Result<List<Map<String, Object>>> getTagsUsage(@RequestParam Long userId) {
-        List<Tag> tags = tagMapper.selectPopular(10);
-
-        return Result.success(tags.stream().map(tag -> {
-            Map<String, Object> tagData = new HashMap<>();
-            tagData.put("name", tag.getName());
-            tagData.put("count", tag.getUseCount());
-            return tagData;
-        }).collect(Collectors.toList()));
+        // 使用 note_tag 表统计实际使用次数
+        List<Map<String, Object>> tagStats = tagMapper.selectTagUsageStats(10);
+        return Result.success(tagStats);
     }
 
     @GetMapping("/notes/category-dist")

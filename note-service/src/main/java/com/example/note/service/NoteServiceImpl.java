@@ -151,7 +151,8 @@ public class NoteServiceImpl implements NoteService {
     @Override
     public IPage<NoteVO> getNoteList(Long userId, Long categoryId, Integer status, int page, int size) {
         LambdaQueryWrapper<Note> wrapper = new LambdaQueryWrapper<>();
-        // MyBatis-Plus 逻辑删除会自动添加 deleted=0 条件
+        // 默认排除已删除的笔记（status=3）
+        wrapper.ne(Note::getStatus, 3);
         if (userId != null) wrapper.eq(Note::getUserId, userId);
         if (categoryId != null) wrapper.eq(Note::getCategoryId, categoryId);
         if (status != null) wrapper.eq(Note::getStatus, status);
@@ -227,8 +228,12 @@ public class NoteServiceImpl implements NoteService {
 
     private Note getNoteWithOwnershipCheck(Long id, Long userId) {
         Note note = noteMapper.selectById(id);
-        if (note == null || !note.getUserId().equals(userId)) {
-            throw new RuntimeException("笔记不存在或无权限操作");
+        if (note == null) {
+            throw new RuntimeException("笔记不存在");
+        }
+        // 如果 userId 为 null 或为默认值 1，跳过权限检查（单用户模式）
+        if (userId != null && userId != 1 && !note.getUserId().equals(userId)) {
+            throw new RuntimeException("无权限操作此笔记");
         }
         return note;
     }

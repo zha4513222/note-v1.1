@@ -50,7 +50,6 @@ const tagChartRef = ref(null)
 const statsData = reactive([
   { icon: '◇', label: '笔记总数', value: 0 },
   { icon: '◈', label: '已发布', value: 0 },
-  { icon: '◆', label: '草稿', value: 0 },
   { icon: '◇', label: '标签总数', value: 0 }
 ])
 
@@ -63,8 +62,7 @@ const fetchStats = async () => {
 
     statsData[0].value = overview.totalNotes || 0
     statsData[1].value = overview.publishedNotes || 0
-    statsData[2].value = overview.draftNotes || 0
-    statsData[3].value = overview.totalTags || 0
+    statsData[2].value = overview.totalTags || 0
 
     const trendRes = await statsApi.getNotesTrend(userId, 7)
     const tagRes = await statsApi.getTagsUsage(userId)
@@ -132,7 +130,8 @@ const renderTagChart = (data) => {
       trigger: 'item',
       backgroundColor: 'rgba(255, 255, 255, 0.95)',
       borderColor: '#e8e4df',
-      textStyle: { color: '#2d2a26' }
+      textStyle: { color: '#2d2a26' },
+      formatter: '{b}: {c} 次 ({d}%)'
     },
     series: [{
       type: 'pie',

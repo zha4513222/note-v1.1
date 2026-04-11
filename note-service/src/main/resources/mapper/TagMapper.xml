@@ -19,4 +19,16 @@
         WHERE nt.note_id = #{noteId}
     </select>
 
+    <select id="selectTagUsageStats" resultType="java.util.Map">
+        SELECT t.name as name,
+               SUM(CASE WHEN n.status != 3 THEN 1 ELSE 0 END) as count
+        FROM tag t
+        LEFT JOIN note_tag nt ON t.id = nt.tag_id
+        LEFT JOIN note n ON nt.note_id = n.id
+        GROUP BY t.id, t.name
+        HAVING count > 0
+        ORDER BY count DESC
+        LIMIT #{limit}
+    </select>
+
 </mapper>
