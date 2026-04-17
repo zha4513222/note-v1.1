@@ -30,7 +30,7 @@
           </router-link>
         </nav>
         <div class="header-actions">
-          <el-button type="primary" class="create-btn" @click="$router.push('/note/new')">
+          <el-button type="primary" class="create-btn" @click="handleCreateNote">
             <span class="btn-icon">+</span>
             新建笔记
           </el-button>
@@ -59,6 +59,16 @@
 </template>
 
 <script setup>
+import { useRouter } from 'vue-router'
+import { useCategoryStore } from '@/stores/category'
+
+const router = useRouter()
+const categoryStore = useCategoryStore()
+
+const handleCreateNote = () => {
+  const query = categoryStore.selectedCategoryId ? { categoryId: categoryStore.selectedCategoryId } : {}
+  router.push({ path: '/note/new', query })
+}
 </script>
 
 <style>

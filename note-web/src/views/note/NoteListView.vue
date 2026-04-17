@@ -6,6 +6,9 @@
         <p class="page-subtitle">记录思考，留住灵感</p>
       </div>
       <div class="header-stats">
+        <el-button type="primary" class="create-btn" @click="handleCreateNote">
+          + 新建笔记
+        </el-button>
         <div class="stat-item">
           <span class="stat-value">{{ total }}</span>
           <span class="stat-label">笔记</span>
@@ -39,7 +42,7 @@
             <div class="empty-icon">◇</div>
             <h3 class="empty-title">暂无笔记</h3>
             <p class="empty-desc">开始记录你的第一个想法吧</p>
-            <el-button type="primary" class="empty-btn" @click="$router.push('/note/new')">
+            <el-button type="primary" class="empty-btn" @click="handleCreateNote">
               创建笔记
             </el-button>
           </div>
@@ -128,10 +131,14 @@
 
 <script setup>
 import { ref, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import noteApi from '@/api/note'
 import CategorySidebar from '@/components/category/CategorySidebar.vue'
+import { useCategoryStore } from '@/stores/category'
 
+const router = useRouter()
+const categoryStore = useCategoryStore()
 const notes = ref([])
 const loading = ref(false)
 const page = ref(1)
@@ -161,6 +168,7 @@ const fetchNotes = async () => {
 
 const handleCategorySelect = (categoryId) => {
   selectedCategoryId.value = categoryId
+  categoryStore.setSelectedCategory(categoryId)
   page.value = 1
   selectedNotes.value = []
   fetchNotes()
@@ -248,6 +256,11 @@ const handleBatchDelete = async () => {
   }
 }
 
+const handleCreateNote = () => {
+  const query = selectedCategoryId.value ? { categoryId: selectedCategoryId.value } : {}
+  router.push({ path: '/note/new', query })
+}
+
 const refreshCategorySidebar = () => {
   if (categorySidebar.value) {
     categorySidebar.value.fetchCategories()
@@ -296,7 +309,17 @@ onMounted(() => {
 .header-stats {
   display: flex;
   gap: 32px;
+  align-items: center;
   animation: fadeInRight 0.6s ease-out;
+}
+
+.create-btn {
+  background: linear-gradient(135deg, var(--accent-primary), #a85d3d) !important;
+  border: none !important;
+  padding: 12px 24px !important;
+  border-radius: var(--radius-md) !important;
+  font-weight: 600 !important;
+  font-size: 14px !important;
 }
 
 .stat-item {

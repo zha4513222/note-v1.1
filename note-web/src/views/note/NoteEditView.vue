@@ -119,11 +119,14 @@ const router = useRouter()
 const noteId = route.params.id
 const isEdit = !!noteId
 
+// 从路由查询参数获取 categoryId（创建新笔记时）
+const initialCategoryId = route.query.categoryId ? Number(route.query.categoryId) : null
+
 const form = reactive({
   title: '',
   content: '',
   contentText: '',
-  categoryId: null,
+  categoryId: initialCategoryId,
   tagIds: [],
   status: 1
 })
