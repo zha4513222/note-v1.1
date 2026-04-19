@@ -116,9 +116,10 @@ const formatDate = (dateStr) => {
   return `${month}月${day}日`
 }
 
+// 获取已应用的标签（实际使用的标签）
 const fetchTags = async () => {
   try {
-    const res = await axios.get('/api/tags')
+    const res = await axios.get('/api/tags/applied')
     allTags.value = res.data.data || []
   } catch (error) {
     console.error('获取标签失败', error)

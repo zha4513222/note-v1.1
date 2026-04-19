@@ -29,27 +29,16 @@ public class StatsController {
     public Result<Map<String, Object>> getOverview(@RequestParam Long userId) {
         Map<String, Object> overview = new HashMap<>();
 
-        // 笔记总数
+        // 笔记总数（排除已删除）
         LambdaQueryWrapper<Note> noteWrapper = new LambdaQueryWrapper<>();
         noteWrapper.eq(Note::getUserId, userId);
         noteWrapper.ne(Note::getStatus, 3);
         long totalNotes = noteMapper.selectCount(noteWrapper);
         overview.put("totalNotes", totalNotes);
 
-        // 已发布笔记数
-        LambdaQueryWrapper<Note> publishedWrapper = new LambdaQueryWrapper<>();
-        publishedWrapper.eq(Note::getUserId, userId);
-        publishedWrapper.eq(Note::getStatus, 2);
-        long publishedNotes = noteMapper.selectCount(publishedWrapper);
-        overview.put("publishedNotes", publishedNotes);
-
-        // 标签总数
-        long totalTags = tagMapper.selectCount(null);
-        overview.put("totalTags", totalTags);
-
-        // 草稿数
-        long draftNotes = totalNotes - publishedNotes;
-        overview.put("draftNotes", draftNotes);
+        // 已应用的标签数量（在笔记中实际使用的标签）
+        int appliedTags = tagMapper.selectAppliedTagCount();
+        overview.put("appliedTags", appliedTags);
 
         return Result.success(overview);
     }

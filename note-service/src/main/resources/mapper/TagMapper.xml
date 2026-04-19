@@ -31,4 +31,19 @@
         LIMIT #{limit}
     </select>
 
+    <select id="selectAppliedTagCount" resultType="int">
+        SELECT COUNT(DISTINCT t.id)
+        FROM tag t
+        INNER JOIN note_tag nt ON t.id = nt.tag_id
+        INNER JOIN note n ON nt.note_id = n.id AND n.status != 3
+    </select>
+
+    <select id="selectAppliedTags" resultMap="BaseResultMap">
+        SELECT DISTINCT t.*
+        FROM tag t
+        INNER JOIN note_tag nt ON t.id = nt.tag_id
+        INNER JOIN note n ON nt.note_id = n.id AND n.status != 3
+        ORDER BY t.use_count DESC
+    </select>
+
 </mapper>

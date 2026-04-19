@@ -315,6 +315,14 @@ public class TagServiceImpl implements TagService {
         return generatedTags;
     }
 
+    @Override
+    public List<TagVO> getAppliedTags() {
+        List<Tag> appliedTags = tagMapper.selectAppliedTags();
+        return appliedTags.stream()
+            .map(this::toTagVO)
+            .collect(Collectors.toList());
+    }
+
     private TagVO toTagVO(Tag tag) {
         TagVO vo = new TagVO();
         vo.setId(tag.getId());

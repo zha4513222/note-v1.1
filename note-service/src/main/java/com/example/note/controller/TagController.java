@@ -56,4 +56,12 @@ public class TagController {
         int maxTags = request.containsKey("maxTags") ? (Integer) request.get("maxTags") : 3;
         return Result.success(tagService.generateTagsFromContent(content, maxTags));
     }
+
+    /**
+     * 获取已应用的标签列表（在笔记中实际使用的标签）
+     */
+    @GetMapping("/applied")
+    public Result<List<TagVO>> getAppliedTags() {
+        return Result.success(tagService.getAppliedTags());
+    }
 }

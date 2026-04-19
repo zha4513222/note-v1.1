@@ -5,10 +5,10 @@
       <p class="page-subtitle">记录你的每一步成长</p>
     </div>
 
-    <!-- 概览卡片 -->
+    <!-- 概览卡片 - 只保留两个 -->
     <div class="stats-overview">
       <div class="stat-card" v-for="(stat, index) in statsData" :key="stat.label"
-           :style="{ animationDelay: `${index * 0.1}s` }">
+           :style="{ animationDelay: `${index * 0.15}s` }">
         <div class="stat-icon">{{ stat.icon }}</div>
         <div class="stat-info">
           <span class="stat-value">{{ stat.value }}</span>
@@ -48,9 +48,8 @@ const trendChartRef = ref(null)
 const tagChartRef = ref(null)
 
 const statsData = reactive([
-  { icon: '◇', label: '笔记总数', value: 0 },
-  { icon: '◈', label: '已发布', value: 0 },
-  { icon: '◇', label: '标签总数', value: 0 }
+  { icon: '📝', label: '笔记总数', value: 0 },
+  { icon: '🏷️', label: '已应用标签', value: 0 }
 ])
 
 const fetchStats = async () => {
@@ -61,8 +60,7 @@ const fetchStats = async () => {
     const overview = overviewRes.data.data || {}
 
     statsData[0].value = overview.totalNotes || 0
-    statsData[1].value = overview.publishedNotes || 0
-    statsData[2].value = overview.totalTags || 0
+    statsData[1].value = overview.appliedTags || 0
 
     const trendRes = await statsApi.getNotesTrend(userId, 7)
     const tagRes = await statsApi.getTagsUsage(userId)
@@ -192,12 +190,15 @@ onMounted(() => {
   color: var(--text-muted);
 }
 
-/* 概览卡片 */
+/* 概览卡片 - 两个卡片居中对称布局 */
 .stats-overview {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 24px;
+  display: flex;
+  justify-content: center;
+  gap: 60px;
   margin-bottom: 40px;
+  max-width: 600px;
+  margin-left: auto;
+  margin-right: auto;
 }
 
 .stat-card {
@@ -206,10 +207,11 @@ onMounted(() => {
   gap: 20px;
   background: var(--bg-card);
   border-radius: var(--radius-lg);
-  padding: 28px;
+  padding: 32px 40px;
   box-shadow: var(--shadow-soft);
   animation: fadeInUp 0.5s ease-out both;
   transition: all 0.3s ease;
+  min-width: 220px;
 }
 
 .stat-card:hover {
@@ -218,14 +220,14 @@ onMounted(() => {
 }
 
 .stat-icon {
-  width: 56px;
-  height: 56px;
+  width: 64px;
+  height: 64px;
   display: flex;
   align-items: center;
   justify-content: center;
   background: linear-gradient(135deg, var(--accent-tertiary), var(--accent-secondary));
   border-radius: var(--radius-md);
-  font-size: 24px;
+  font-size: 28px;
   color: var(--accent-primary);
 }
 
@@ -236,16 +238,16 @@ onMounted(() => {
 
 .stat-value {
   font-family: 'Crimson Pro', serif;
-  font-size: 36px;
+  font-size: 42px;
   font-weight: 700;
   color: var(--text-primary);
   line-height: 1;
 }
 
 .stat-label {
-  font-size: 13px;
+  font-size: 14px;
   color: var(--text-muted);
-  margin-top: 4px;
+  margin-top: 6px;
 }
 
 /* 图表区域 */

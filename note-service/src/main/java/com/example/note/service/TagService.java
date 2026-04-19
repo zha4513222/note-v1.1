@@ -26,4 +26,9 @@ public interface TagService {
      * @return 生成的标签列表
      */
     List<TagVO> generateTagsFromContent(String content, int maxTags);
+
+    /**
+     * 获取已应用的标签列表（在笔记中实际使用的标签）
+     */
+    List<TagVO> getAppliedTags();
 }

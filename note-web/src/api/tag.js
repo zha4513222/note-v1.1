@@ -37,5 +37,10 @@ export default {
   // 从内容自动生成标签（最多3个）
   generateTags(content, maxTags = 3) {
     return api.post('/tags/generate', { content, maxTags })
+  },
+
+  // 获取已应用的标签列表（在笔记中实际使用的标签）
+  getAppliedTags() {
+    return api.get('/tags/applied')
   }
 }
