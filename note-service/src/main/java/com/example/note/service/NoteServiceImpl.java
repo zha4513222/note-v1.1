@@ -109,10 +109,17 @@ public class NoteServiceImpl implements NoteService {
         note.setContentText(dto.getContentText());
         note.setCategoryId(dto.getCategoryId());
 
-        // 新增：编辑后自动置顶（如果指定了置顶时长）
-        if (dto.getPinDuration() != null && dto.getPinDuration() >= 0) {
-            note.setPinnedAt(LocalDateTime.now());
-            note.setPinDuration(dto.getPinDuration());
+        // 处理置顶状态
+        if (dto.getPinDuration() != null) {
+            if (dto.getPinDuration() >= 0) {
+                // 设置置顶
+                note.setPinnedAt(LocalDateTime.now());
+                note.setPinDuration(dto.getPinDuration());
+            } else {
+                // 取消置顶（pinDuration == -1）
+                note.setPinnedAt(null);
+                note.setPinDuration(-1);
+            }
         }
 
         // 新增：更新封面图
@@ -120,6 +127,9 @@ public class NoteServiceImpl implements NoteService {
             note.setCoverImage(dto.getCoverImage());
         } else if (dto.getImages() != null && !dto.getImages().isEmpty()) {
             note.setCoverImage(dto.getImages().get(0));
+        } else {
+            // 如果没有封面且图片列表为空，清除封面
+            note.setCoverImage(null);
         }
 
         noteMapper.updateById(note);
@@ -227,11 +237,9 @@ public class NoteServiceImpl implements NoteService {
         if (categoryId != null) wrapper.eq(Note::getCategoryId, categoryId);
         if (status != null) wrapper.eq(Note::getStatus, status);
 
-        // 新增：置顶优先排序
-        // 置顶且未过期的排在前面，然后按置顶时间、更新时间、创建时间排序
-        wrapper.orderByDesc(Note::getPinnedAt);
-        wrapper.orderByDesc(Note::getUpdatedAt);
-        wrapper.orderByDesc(Note::getCreatedAt);
+        // 排序规则：置顶优先 → 置顶时间 → 更新时间 → 创建时间
+        // 使用CASE WHEN确保置顶笔记排在前面（MySQL DESC排序时NULL值默认排前面，需特殊处理）
+        wrapper.last("ORDER BY CASE WHEN pinned_at IS NOT NULL AND pin_duration != -1 THEN 1 ELSE 0 END DESC, pinned_at DESC, updated_at DESC, created_at DESC");
 
         IPage<Note> notePage = noteMapper.selectPage(new Page<>(page, size), wrapper);
         IPage<NoteVO> voPage = notePage.convert(this::toNoteVO);

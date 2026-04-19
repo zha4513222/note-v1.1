@@ -59,7 +59,7 @@
         <div class="sidebar-card" v-if="form.images.length > 0">
           <div class="card-header">
             <h3 class="card-title">封面图</h3>
-            <span class="crop-tip">点击图片裁剪选择区域</span>
+            <span class="crop-tip">点击图片裁剪，×删除图片</span>
           </div>
           <div class="cover-image-selector">
             <div
@@ -72,11 +72,15 @@
               <img :src="img" alt="封面候选" />
               <div class="cover-check" v-if="form.coverImage === img">✓</div>
               <div class="crop-icon">✂</div>
+              <button class="delete-image-btn" @click.stop="deleteImage(index, img)">×</button>
             </div>
           </div>
           <!-- 当前封面预览 -->
           <div class="cover-preview" v-if="form.coverImage">
-            <span class="preview-label">当前封面：</span>
+            <div class="preview-header">
+              <span class="preview-label">当前封面：</span>
+              <button class="clear-cover-btn" @click="clearCoverImage">清除封面</button>
+            </div>
             <img :src="form.coverImage" alt="封面预览" class="preview-img" />
           </div>
         </div>
@@ -313,6 +317,39 @@ const handleCropComplete = (croppedUrl) => {
   if (!form.images.includes(croppedUrl)) {
     form.images.push(croppedUrl)
   }
+}
+
+// 删除图片
+const deleteImage = (index, imgUrl) => {
+  // 从图片列表中删除
+  form.images.splice(index, 1)
+
+  // 如果删除的图片是当前封面，清除封面
+  if (form.coverImage === imgUrl) {
+    form.coverImage = null
+  }
+
+  // 如果封面URL包含该图片（裁剪后的图片也可能基于原图）
+  if (form.coverImage && form.coverImage.includes(imgUrl.split('/').pop().split('?')[0])) {
+    form.coverImage = null
+  }
+
+  // 从编辑器内容中删除该图片
+  if (editorRef.value) {
+    const quill = editorRef.value.getQuill()
+    const content = quill.root.innerHTML
+    // 移除图片标签
+    const newContent = content.replace(`<img src="${imgUrl}">`, '')
+    quill.root.innerHTML = newContent
+  }
+
+  ElMessage.success('图片已删除')
+}
+
+// 清除封面
+const clearCoverImage = () => {
+  form.coverImage = null
+  ElMessage.success('封面已清除')
 }
 
 const fetchTags = async () => {
@@ -718,6 +755,34 @@ onMounted(() => {
   opacity: 1;
 }
 
+.delete-image-btn {
+  position: absolute;
+  top: 4px;
+  left: 4px;
+  width: 20px;
+  height: 20px;
+  background: rgba(220, 53, 69, 0.9);
+  color: white;
+  border: none;
+  border-radius: 50%;
+  cursor: pointer;
+  font-size: 14px;
+  line-height: 1;
+  opacity: 0;
+  transition: opacity 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.cover-option:hover .delete-image-btn {
+  opacity: 1;
+}
+
+.delete-image-btn:hover {
+  background: #dc3545;
+}
+
 /* 裁剪提示 */
 .crop-tip {
   font-size: 11px;
@@ -731,11 +796,32 @@ onMounted(() => {
   border-top: 1px solid var(--border-light);
 }
 
+.preview-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
 .preview-label {
   font-size: 12px;
   color: var(--text-secondary);
-  margin-bottom: 8px;
-  display: block;
+}
+
+.clear-cover-btn {
+  padding: 4px 8px;
+  font-size: 12px;
+  background: transparent;
+  border: 1px solid var(--border-medium);
+  color: var(--text-muted);
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.clear-cover-btn:hover {
+  border-color: #dc3545;
+  color: #dc3545;
 }
 
 .preview-img {
