@@ -17,6 +17,7 @@ public class MyBatisPlusMetaObjectHandler implements MetaObjectHandler {
 
     @Override
     public void updateFill(MetaObject metaObject) {
-        this.strictUpdateFill(metaObject, "updatedAt", LocalDateTime.class, LocalDateTime.now());
+        // 使用setFieldValByName强制更新，不管字段是否有值
+        this.setFieldValByName("updatedAt", LocalDateTime.now(), metaObject);
     }
 }
