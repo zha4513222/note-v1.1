@@ -36,11 +36,15 @@ CREATE TABLE IF NOT EXISTS note (
     view_count INT DEFAULT 0,
     like_count INT DEFAULT 0,
     status TINYINT DEFAULT 1 COMMENT '1-草稿 2-已发布 3-已删除',
+    pinned_at DATETIME DEFAULT NULL COMMENT '置顶时间',
+    pin_duration INT DEFAULT -1 COMMENT '置顶时长(天),0=永久,-1=未置顶',
+    cover_image VARCHAR(255) DEFAULT NULL COMMENT '封面图URL',
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     INDEX idx_user_id (user_id),
     INDEX idx_category_id (category_id),
-    INDEX idx_status (status)
+    INDEX idx_status (status),
+    INDEX idx_pinned_at (pinned_at)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- 标签表
@@ -83,6 +87,17 @@ CREATE TABLE IF NOT EXISTS user_tag_history (
     INDEX idx_user_id (user_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
+-- 笔记图片关联表
+CREATE TABLE IF NOT EXISTS note_image (
+    id BIGINT PRIMARY KEY AUTO_INCREMENT,
+    note_id BIGINT NOT NULL,
+    image_url VARCHAR(255) NOT NULL,
+    image_order INT DEFAULT 0 COMMENT '图片顺序',
+    is_cover TINYINT DEFAULT 0 COMMENT '是否为封面图',
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_note_id (note_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='笔记图片关联表';
+
 -- 用户每日统计表
 CREATE TABLE IF NOT EXISTS user_daily_stats (
     id BIGINT PRIMARY KEY AUTO_INCREMENT,
@@ -98,3 +113,13 @@ CREATE TABLE IF NOT EXISTS user_daily_stats (
 -- 插入默认测试用户
 INSERT INTO sys_user (username, password, email) VALUES
 ('test', '$2a$10$N.zmdr9k7uOCQb376NoUnuTJ8iAt6Z5EHsM8lE9lBOsl7iAt6Z5EH', 'test@example.com');
+
+-- ========================================
+-- 数据库迁移脚本（用于现有数据库）
+-- ========================================
+
+-- 为现有note表添加置顶和封面图字段（如果字段不存在）
+-- ALTER TABLE note ADD COLUMN pinned_at DATETIME DEFAULT NULL COMMENT '置顶时间';
+-- ALTER TABLE note ADD COLUMN pin_duration INT DEFAULT -1 COMMENT '置顶时长(天),0=永久,-1=未置顶';
+-- ALTER TABLE note ADD COLUMN cover_image VARCHAR(255) DEFAULT NULL COMMENT '封面图URL';
+-- ALTER TABLE note ADD INDEX idx_pinned_at (pinned_at);

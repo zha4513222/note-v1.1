@@ -54,7 +54,7 @@ CREATE TABLE IF NOT EXISTS category (
     INDEX idx_user_id (user_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
--- 笔记表
+-- 笔记表（包含置顶和封面图字段）
 CREATE TABLE IF NOT EXISTS note (
     id BIGINT PRIMARY KEY AUTO_INCREMENT,
     user_id BIGINT NOT NULL,
@@ -65,11 +65,15 @@ CREATE TABLE IF NOT EXISTS note (
     view_count INT DEFAULT 0,
     like_count INT DEFAULT 0,
     status TINYINT DEFAULT 1 COMMENT '1-草稿 2-已发布 3-已删除',
+    pinned_at DATETIME DEFAULT NULL COMMENT '置顶时间',
+    pin_duration INT DEFAULT -1 COMMENT '置顶时长(天),0=永久,-1=未置顶',
+    cover_image VARCHAR(255) DEFAULT NULL COMMENT '封面图URL',
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     INDEX idx_user_id (user_id),
     INDEX idx_category_id (category_id),
-    INDEX idx_status (status)
+    INDEX idx_status (status),
+    INDEX idx_pinned_at (pinned_at)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- 标签表
@@ -89,6 +93,17 @@ CREATE TABLE IF NOT EXISTS note_tag (
     UNIQUE KEY uk_note_tag (note_id, tag_id),
     INDEX idx_tag_id (tag_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- 笔记图片关联表（用于存储笔记中的图片列表）
+CREATE TABLE IF NOT EXISTS note_image (
+    id BIGINT PRIMARY KEY AUTO_INCREMENT,
+    note_id BIGINT NOT NULL,
+    image_url VARCHAR(255) NOT NULL,
+    image_order INT DEFAULT 0 COMMENT '图片顺序',
+    is_cover TINYINT DEFAULT 0 COMMENT '是否为封面图',
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_note_id (note_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='笔记图片关联表';
 
 -- 关键词表
 CREATE TABLE IF NOT EXISTS keyword (
@@ -125,7 +140,33 @@ CREATE TABLE IF NOT EXISTS user_daily_stats (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 ```
 
-### 1.3 修改数据库连接配置
+### 1.3 现有数据库升级（重要）
+
+如果已有旧版本数据库，需要执行以下升级 SQL：
+
+```sql
+-- 添加置顶和封面图字段
+ALTER TABLE note
+  ADD COLUMN pinned_at DATETIME DEFAULT NULL COMMENT '置顶时间',
+  ADD COLUMN pin_duration INT DEFAULT -1 COMMENT '置顶时长(天),0=永久,-1=未置顶',
+  ADD COLUMN cover_image VARCHAR(255) DEFAULT NULL COMMENT '封面图URL';
+
+-- 添加置顶时间索引
+ALTER TABLE note ADD INDEX idx_pinned_at (pinned_at);
+
+-- 创建笔记图片关联表
+CREATE TABLE IF NOT EXISTS note_image (
+    id BIGINT PRIMARY KEY AUTO_INCREMENT,
+    note_id BIGINT NOT NULL,
+    image_url VARCHAR(255) NOT NULL,
+    image_order INT DEFAULT 0,
+    is_cover TINYINT DEFAULT 0,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_note_id (note_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='笔记图片关联表';
+```
+
+### 1.4 修改数据库连接配置
 
 编辑 `note-service/src/main/resources/application.yml`：
 
@@ -134,7 +175,7 @@ spring:
   datasource:
     url: jdbc:mysql://localhost:3306/note_db?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true
     username: root        # 修改为你的用户名
-    password: root        # 修改为你的密码
+    password: your_password  # 修改为你的密码
 ```
 
 ## 二、后端启动
@@ -203,13 +244,56 @@ npm run dev
 - 链接、图片插入
 - 引用块
 
-### 4.3 标签系统
+### 4.3 图片上传（新功能）
+
+编辑笔记时可上传图片：
+- **上传限制**：单个文件最大 5MB，支持 jpg/png/gif/webp 格式
+- **数量限制**：每篇笔记最多 10 张图片
+- **封面图**：自动提取第一张图作为封面，可手动选择其他图片
+- **存储位置**：图片存储在 `uploads/` 目录下
+
+配置文件上传（`application.yml`）：
+```yaml
+file:
+  upload:
+    path: ./uploads            # 图片存储路径（可修改为绝对路径）
+    max-size: 5242880          # 单文件最大 5MB（字节）
+    allowed-types: jpg,jpeg,png,gif,webp
+    max-images-per-note: 10    # 每篇笔记最多图片数
+```
+
+### 4.4 笔记置顶（新功能）
+
+创建或编辑笔记时可设置置顶：
+- **永久置顶**：一直保持在列表顶部
+- **7天置顶**：7天后自动取消置顶
+- **3天置顶**：3天后自动取消置顶
+- **1天置顶**：1天后自动取消置顶
+- **取消置顶**：在笔记卡片上点击「取消置顶」按钮
+
+排序规则：置顶笔记 > 置顶时间 > 更新时间 > 创建时间
+
+配置置顶设置（`application.yml`）：
+```yaml
+note:
+  pin:
+    durations: 0,7,3,1        # 可选置顶时长（天），0=永久
+    default-duration: 0       # 默认永久置顶
+```
+
+### 4.5 标签系统
 
 - **添加标签**：编辑笔记时在标签区域输入标签名
 - **推荐标签**：系统根据笔记内容和用户历史自动推荐
 - **热门标签**：显示全站使用最多的标签
 
-### 4.4 关键词提取
+推荐算法权重（可在 `application.yml` 调整）：
+- 关键词匹配：30分
+- 用户历史使用：25分
+- 热门标签：10分
+- 时间新近性：5分（7天内使用+5分，30天内+2.5分）
+
+### 4.6 关键词提取
 
 系统使用 Jieba 中文分词自动提取笔记关键词：
 
@@ -217,13 +301,13 @@ npm run dev
 2. 关键词显示在笔记详情页
 3. 支持手动提取：发送内容到 `/api/notes/extract-keywords`
 
-### 4.5 搜索功能
+### 4.7 搜索功能
 
 - **关键词搜索**：在搜索框输入标题或内容关键词
 - **标签筛选**：选择标签进行精确筛选
 - **搜索建议**：输入时显示标题自动补全
 
-### 4.6 统计可视化
+### 4.8 统计可视化
 
 访问 `/stats` 页面查看：
 
@@ -244,9 +328,18 @@ npm run dev
 | PUT | /api/notes/{id} | 更新笔记 |
 | DELETE | /api/notes/{id} | 删除笔记 |
 | POST | /api/notes/{id}/publish | 发布笔记 |
+| PUT | /api/notes/{id}/pin | 更新置顶状态（新） |
+| DELETE | /api/notes/{id}/pin | 取消置顶（新） |
 | POST | /api/notes/extract-keywords | 提取关键词 |
 
-### 5.2 标签接口
+### 5.2 文件上传接口（新）
+
+| 方法 | 路径 | 说明 |
+|------|------|------|
+| POST | /api/files/upload/image | 上传图片 |
+| DELETE | /api/files/image | 删除图片 |
+
+### 5.3 标签接口
 
 | 方法 | 路径 | 说明 |
 |------|------|------|
@@ -256,7 +349,7 @@ npm run dev
 | DELETE | /api/tags/{id} | 删除标签 |
 | GET | /api/tags/recommend | 获取推荐标签 |
 
-### 5.3 分类接口
+### 5.4 分类接口
 
 | 方法 | 路径 | 说明 |
 |------|------|------|
@@ -264,14 +357,14 @@ npm run dev
 | POST | /api/categories | 创建分类 |
 | DELETE | /api/categories/{id} | 删除分类 |
 
-### 5.4 搜索接口
+### 5.5 搜索接口
 
 | 方法 | 路径 | 说明 |
 |------|------|------|
 | GET | /api/search/notes | 搜索笔记 |
 | GET | /api/search/suggestions | 获取搜索建议 |
 
-### 5.5 统计接口
+### 5.6 统计接口
 
 | 方法 | 路径 | 说明 |
 |------|------|------|
@@ -284,26 +377,55 @@ npm run dev
 
 ```
 note v1.1/
+├── uploads/                   # 图片上传目录（新）
+│   └── {userId}/             # 用户图片目录
+│
 ├── note-service/              # Spring Boot 后端
 │   ├── src/main/java/com/example/note/
 │   │   ├── controller/       # REST API 控制器
+│   │   │   ├── NoteController.java
+│   │   │   ├── FileUploadController.java  # 文件上传（新）
+│   │   │   └── ...
 │   │   ├── service/          # 业务逻辑
+│   │   │   ├── NoteServiceImpl.java      # 置顶处理（新）
+│   │   │   ├── FileUploadService.java    # 文件上传（新）
+│   │   │   └── ...
 │   │   ├── repository/        # MyBatis Mapper
+│   │   │   ├── NoteImageMapper.java      # 图片关联（新）
+│   │   │   └── ...
 │   │   ├── entity/           # 数据实体
+│   │   │   ├── Note.java                  # 添加置顶字段（新）
+│   │   │   ├── NoteImage.java             # 图片实体（新）
+│   │   │   └── ...
 │   │   ├── dto/              # 数据传输对象
+│   │   │   ├── NoteCreateDTO.java         # 添加图片/置顶字段（新）
+│   │   │   ├── NoteVO.java                # 添加封面/置顶字段（新）
+│   │   │   ├── PinUpdateDTO.java          # 置顶DTO（新）
+│   │   │   └── ...
 │   │   ├── config/           # 配置类
+│   │   │   ├── WebConfig.java            # 静态资源映射（新）
+│   │   │   └── ...
 │   │   └── handler/          # 处理器
 │   └── src/main/resources/
-│       ├── application.yml   # 应用配置
-│       └── db/schema.sql     # 数据库脚本
+│       ├── application.yml   # 应用配置（含上传/置顶配置）
+│       └── db/schema.sql     # 数据库脚本（含新字段/表）
 │
 └── note-web/                  # Vue 3 前端
     ├── src/
     │   ├── api/              # API 调用模块
+    │   │   ├── note.js                    # 添加上传/置顶API（新）
+    │   │   └── ...
     │   ├── views/            # 页面组件
+    │   │   ├── note/
+    │   │   │   ├── NoteListView.vue       # 置顶标识/封面图（新）
+    │   │   │   ├── NoteEditView.vue       # 图片上传/置顶设置（新）
+    │   │   │   └── ...
+    │   │   └── ...
     │   ├── components/       # 通用组件
     │   ├── router/           # 路由配置
-    │   └── stores/           # Pinia 状态
+    │   ├── stores/           # Pinia 状态
+    │   │   └── category.js                 # 分类store
+    │   └── assets/           # 静态资源
     ├── package.json
     └── vite.config.js       # Vite 配置
 ```

@@ -9,6 +9,9 @@ spring:
     username: root
     password: root
     driver-class-name: com.mysql.cj.jdbc.Driver
+  web:
+    resources:
+      static-locations: classpath:/static/,file:./uploads/
 
 mybatis-plus:
   mapper-locations: classpath:mapper/*.xml
@@ -36,6 +39,20 @@ tag:
     hot-tag-score: 10
     recency-score: 5
     max-results: 5
+
+# 文件上传配置
+file:
+  upload:
+    path: D:/develop/Claude Project/note v1.1/uploads            # 本地存储路径
+    max-size: 5242880          # 单文件最大5MB (bytes)
+    allowed-types: jpg,jpeg,png,gif,webp
+    max-images-per-note: 10    # 每篇笔记最多10张图
+
+# 置顶配置
+note:
+  pin:
+    durations: 0,7,3,1        # 可选置顶时长（天），0=永久
+    default-duration: 0       # 默认永久置顶
 
 logging:
   level:

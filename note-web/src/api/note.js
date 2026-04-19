@@ -62,5 +62,27 @@ export default {
   // 提取关键词
   extractKeywords(content) {
     return api.post('/notes/extract-keywords', { content })
+  },
+
+  // 新增：上传图片
+  uploadImage(file) {
+    const formData = new FormData()
+    formData.append('file', file)
+    return axios.post('/api/files/upload/image', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+        'X-User-Id': 1
+      }
+    })
+  },
+
+  // 新增：更新置顶状态
+  updateNotePin(id, pinDuration) {
+    return api.put(`/notes/${id}/pin`, { pinDuration })
+  },
+
+  // 新增：取消置顶
+  cancelNotePin(id) {
+    return api.delete(`/notes/${id}/pin`)
   }
 }

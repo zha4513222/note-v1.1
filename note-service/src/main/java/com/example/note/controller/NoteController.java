@@ -5,6 +5,7 @@ import com.example.note.common.Result;
 import com.example.note.dto.NoteCreateDTO;
 import com.example.note.dto.NoteVO;
 import com.example.note.dto.KeywordVO;
+import com.example.note.dto.PinUpdateDTO;
 import com.example.note.service.NoteService;
 import org.springframework.web.bind.annotation.*;
 
@@ -90,5 +91,23 @@ public class NoteController {
     @PostMapping("/extract-keywords")
     public Result<List<KeywordVO>> extractKeywords(@RequestBody Map<String, String> request) {
         return Result.success(noteService.extractKeywordsFromContent(request.get("content")));
+    }
+
+    // 新增：更新置顶状态
+    @PutMapping("/{id}/pin")
+    public Result<NoteVO> updateNotePin(
+            @PathVariable Long id,
+            @RequestBody PinUpdateDTO dto,
+            @RequestHeader(value = "X-User-Id", defaultValue = "1") Long userId) {
+        return Result.success(noteService.updateNotePin(id, dto.getPinDuration(), userId));
+    }
+
+    // 新增：取消置顶
+    @DeleteMapping("/{id}/pin")
+    public Result<Void> cancelNotePin(
+            @PathVariable Long id,
+            @RequestHeader(value = "X-User-Id", defaultValue = "1") Long userId) {
+        noteService.cancelNotePin(id, userId);
+        return Result.success();
     }
 }

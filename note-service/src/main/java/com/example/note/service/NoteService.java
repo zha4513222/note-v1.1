@@ -27,4 +27,9 @@ public interface NoteService {
     List<KeywordVO> extractKeywords(Long noteId);
 
     List<KeywordVO> extractKeywordsFromContent(String content);
+
+    // 新增：置顶相关方法
+    NoteVO updateNotePin(Long id, Integer pinDuration, Long userId);
+
+    void cancelNotePin(Long id, Long userId);
 }

@@ -272,6 +272,49 @@ public class TagServiceImpl implements TagService {
         recommendationCache.invalidateAll();
     }
 
+    @Override
+    public List<TagVO> generateTagsFromContent(String content, int maxTags) {
+        if (content == null || content.trim().isEmpty()) {
+            return Collections.emptyList();
+        }
+
+        // 从内容提取关键词
+        List<KeywordVO> keywords = nlpService.extractKeywords(content, 10);
+
+        // 选择权重最高的关键词作为标签候选（最多maxTags个）
+        List<TagVO> generatedTags = new ArrayList<>();
+        Set<String> createdNames = new HashSet<>();
+
+        for (KeywordVO kw : keywords) {
+            String word = kw.getWord();
+            if (word == null || word.length() < 2 || createdNames.contains(word.toLowerCase())) {
+                continue;
+            }
+
+            // 检查是否已存在同名标签
+            LambdaQueryWrapper<Tag> wrapper = new LambdaQueryWrapper<>();
+            wrapper.eq(Tag::getName, word);
+            Tag existingTag = tagMapper.selectOne(wrapper);
+
+            if (existingTag != null) {
+                // 标签已存在，直接使用
+                generatedTags.add(toTagVO(existingTag));
+            } else {
+                // 创建新标签
+                TagVO newTag = createTag(word);
+                generatedTags.add(newTag);
+            }
+
+            createdNames.add(word.toLowerCase());
+
+            if (generatedTags.size() >= maxTags) {
+                break;
+            }
+        }
+
+        return generatedTags;
+    }
+
     private TagVO toTagVO(Tag tag) {
         TagVO vo = new TagVO();
         vo.setId(tag.getId());

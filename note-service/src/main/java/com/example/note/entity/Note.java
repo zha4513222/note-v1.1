@@ -27,6 +27,13 @@ public class Note {
 
     private Integer status;
 
+    @TableField(updateStrategy = FieldStrategy.IGNORED)  // 允许更新为null
+    private LocalDateTime pinnedAt;      // 置顶时间
+
+    private Integer pinDuration;        // 置顶时长(天), 0=永久, -1=未置顶
+
+    private String coverImage;          // 封面图URL
+
     @TableField(fill = FieldFill.INSERT)
     private LocalDateTime createdAt;
 

@@ -18,4 +18,12 @@ public interface TagService {
     void invalidateUserCache(Long userId);
 
     void invalidateRecommendationCache();
+
+    /**
+     * 从内容提取关键词并生成新标签
+     * @param content 笔记内容
+     * @param maxTags 最大标签数量（默认3）
+     * @return 生成的标签列表
+     */
+    List<TagVO> generateTagsFromContent(String content, int maxTags);
 }

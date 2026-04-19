@@ -39,8 +39,17 @@ public class NLPServiceImpl implements NLPService {
         // 词频统计（只保留长度>=2的非停用词）
         Map<String, Integer> wordCount = new HashMap<>();
         for (SegToken token : tokens) {
-            // SegToken.word 是一个 Word 对象，需要转换为字符串
-            String word = token.word.toString();
+            // 使用 Word.getToken() 方法获取词字符串
+            String word = "";
+            Object wordObj = token.word;
+            if (wordObj instanceof Word) {
+                word = ((Word) wordObj).getToken();
+            } else if (wordObj instanceof String) {
+                word = (String) wordObj;
+            } else if (wordObj != null) {
+                word = wordObj.toString();
+            }
+
             // 过滤停用词、纯数字、太短的词
             if (word == null || word.trim().isEmpty()) {
                 continue;

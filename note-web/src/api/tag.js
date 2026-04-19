@@ -32,5 +32,10 @@ export default {
   // 推荐标签
   recommendTags(userId, content, tagIds) {
     return api.get('/tags/recommend', { params: { userId, content, tagIds } })
+  },
+
+  // 从内容自动生成标签（最多3个）
+  generateTags(content, maxTags = 3) {
+    return api.post('/tags/generate', { content, maxTags })
   }
 }

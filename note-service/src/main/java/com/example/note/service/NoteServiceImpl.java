@@ -10,6 +10,7 @@ import com.example.note.dto.KeywordVO;
 import com.example.note.entity.*;
 import com.example.note.repository.CategoryMapper;
 import com.example.note.repository.KeywordMapper;
+import com.example.note.repository.NoteImageMapper;
 import com.example.note.repository.NoteMapper;
 import com.example.note.repository.NoteTagMapper;
 import com.example.note.repository.TagMapper;
@@ -29,6 +30,7 @@ public class NoteServiceImpl implements NoteService {
     private final TagMapper tagMapper;
     private final KeywordMapper keywordMapper;
     private final NoteTagMapper noteTagMapper;
+    private final NoteImageMapper noteImageMapper;
     private final UserTagHistoryMapper userTagHistoryMapper;
     private final NLPService nlpService;
     private final TagService tagService;
@@ -36,6 +38,7 @@ public class NoteServiceImpl implements NoteService {
 
     public NoteServiceImpl(NoteMapper noteMapper, TagMapper tagMapper,
                           KeywordMapper keywordMapper, NoteTagMapper noteTagMapper,
+                          NoteImageMapper noteImageMapper,
                           UserTagHistoryMapper userTagHistoryMapper,
                           NLPService nlpService, TagService tagService,
                           CategoryMapper categoryMapper) {
@@ -43,6 +46,7 @@ public class NoteServiceImpl implements NoteService {
         this.tagMapper = tagMapper;
         this.keywordMapper = keywordMapper;
         this.noteTagMapper = noteTagMapper;
+        this.noteImageMapper = noteImageMapper;
         this.userTagHistoryMapper = userTagHistoryMapper;
         this.nlpService = nlpService;
         this.tagService = tagService;
@@ -59,7 +63,27 @@ public class NoteServiceImpl implements NoteService {
         note.setContentText(dto.getContentText());
         note.setCategoryId(dto.getCategoryId());
         note.setStatus(2); // 已发布
+
+        // 新增：设置置顶状态（创建笔记时自动置顶）
+        if (dto.getPinDuration() != null && dto.getPinDuration() >= 0) {
+            note.setPinnedAt(LocalDateTime.now());
+            note.setPinDuration(dto.getPinDuration());
+        }
+
+        // 新增：设置封面图
+        if (dto.getCoverImage() != null) {
+            note.setCoverImage(dto.getCoverImage());
+        } else if (dto.getImages() != null && !dto.getImages().isEmpty()) {
+            // 自动提取第一张图作为封面
+            note.setCoverImage(dto.getImages().get(0));
+        }
+
         noteMapper.insert(note);
+
+        // 新增：保存图片关联
+        if (dto.getImages() != null && !dto.getImages().isEmpty()) {
+            saveNoteImages(note.getId(), dto.getImages(), dto.getCoverImage());
+        }
 
         // 保存标签关联
         if (dto.getTagIds() != null && !dto.getTagIds().isEmpty()) {
@@ -84,7 +108,29 @@ public class NoteServiceImpl implements NoteService {
         note.setContent(dto.getContent());
         note.setContentText(dto.getContentText());
         note.setCategoryId(dto.getCategoryId());
+
+        // 新增：编辑后自动置顶（如果指定了置顶时长）
+        if (dto.getPinDuration() != null && dto.getPinDuration() >= 0) {
+            note.setPinnedAt(LocalDateTime.now());
+            note.setPinDuration(dto.getPinDuration());
+        }
+
+        // 新增：更新封面图
+        if (dto.getCoverImage() != null) {
+            note.setCoverImage(dto.getCoverImage());
+        } else if (dto.getImages() != null && !dto.getImages().isEmpty()) {
+            note.setCoverImage(dto.getImages().get(0));
+        }
+
         noteMapper.updateById(note);
+
+        // 新增：更新图片关联
+        if (dto.getImages() != null) {
+            noteImageMapper.deleteByNoteId(id);
+            if (!dto.getImages().isEmpty()) {
+                saveNoteImages(id, dto.getImages(), dto.getCoverImage());
+            }
+        }
 
         // 更新标签关联
         if (dto.getTagIds() != null) {
@@ -100,6 +146,30 @@ public class NoteServiceImpl implements NoteService {
         }
 
         return toNoteVO(note);
+    }
+
+    // 新增：更新置顶状态
+    @Override
+    @Transactional
+    public NoteVO updateNotePin(Long id, Integer pinDuration, Long userId) {
+        Note note = getNoteWithOwnershipCheck(id, userId);
+        if (pinDuration == null || pinDuration < 0) {
+            // 取消置顶
+            note.setPinnedAt(null);
+            note.setPinDuration(-1);
+        } else {
+            note.setPinnedAt(LocalDateTime.now());
+            note.setPinDuration(pinDuration);
+        }
+        noteMapper.updateById(note);
+        return toNoteVO(note);
+    }
+
+    // 新增：取消置顶
+    @Override
+    @Transactional
+    public void cancelNotePin(Long id, Long userId) {
+        updateNotePin(id, -1, userId);
     }
 
     @Override
@@ -156,6 +226,11 @@ public class NoteServiceImpl implements NoteService {
         if (userId != null) wrapper.eq(Note::getUserId, userId);
         if (categoryId != null) wrapper.eq(Note::getCategoryId, categoryId);
         if (status != null) wrapper.eq(Note::getStatus, status);
+
+        // 新增：置顶优先排序
+        // 置顶且未过期的排在前面，然后按置顶时间、更新时间、创建时间排序
+        wrapper.orderByDesc(Note::getPinnedAt);
+        wrapper.orderByDesc(Note::getUpdatedAt);
         wrapper.orderByDesc(Note::getCreatedAt);
 
         IPage<Note> notePage = noteMapper.selectPage(new Page<>(page, size), wrapper);
@@ -175,6 +250,18 @@ public class NoteServiceImpl implements NoteService {
     @Override
     public List<KeywordVO> extractKeywordsFromContent(String content) {
         return nlpService.extractKeywords(content, 10);
+    }
+
+    // 新增：保存图片关联
+    private void saveNoteImages(Long noteId, List<String> images, String coverImage) {
+        for (int i = 0; i < images.size(); i++) {
+            NoteImage noteImage = new NoteImage();
+            noteImage.setNoteId(noteId);
+            noteImage.setImageUrl(images.get(i));
+            noteImage.setImageOrder(i);
+            noteImage.setIsCover(coverImage != null && coverImage.equals(images.get(i)) ? 1 : 0);
+            noteImageMapper.insert(noteImage);
+        }
     }
 
     private void saveKeywords(Long noteId, String content) {
@@ -257,6 +344,24 @@ public class NoteServiceImpl implements NoteService {
                 vo.setCategoryName(category.getName());
             }
         }
+
+        // 新增：获取图片列表
+        List<NoteImage> images = noteImageMapper.selectByNoteId(note.getId());
+        vo.setImages(images.stream().map(NoteImage::getImageUrl).collect(Collectors.toList()));
+
+        // 新增：计算是否置顶
+        vo.setIsPinned(isNotePinned(note));
+
         return vo;
+    }
+
+    // 新增：判断笔记是否当前置顶
+    private boolean isNotePinned(Note note) {
+        if (note.getPinnedAt() == null) return false;
+        if (note.getPinDuration() == null || note.getPinDuration() < 0) return false;
+        if (note.getPinDuration() == 0) return true; // 永久置顶
+        // 计算是否过期
+        LocalDateTime expireTime = note.getPinnedAt().plusDays(note.getPinDuration());
+        return LocalDateTime.now().isBefore(expireTime);
     }
 }

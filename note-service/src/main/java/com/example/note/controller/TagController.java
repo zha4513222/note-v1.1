@@ -46,4 +46,14 @@ public class TagController {
             @RequestParam(required = false) List<Long> tagIds) {
         return Result.success(tagService.recommendTags(userId, content, tagIds));
     }
+
+    /**
+     * 从内容自动生成标签（最多3个）
+     */
+    @PostMapping("/generate")
+    public Result<List<TagVO>> generateTags(@RequestBody Map<String, Object> request) {
+        String content = (String) request.get("content");
+        int maxTags = request.containsKey("maxTags") ? (Integer) request.get("maxTags") : 3;
+        return Result.success(tagService.generateTagsFromContent(content, maxTags));
+    }
 }

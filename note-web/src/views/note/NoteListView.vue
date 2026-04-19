@@ -52,13 +52,23 @@
             v-for="(note, index) in notes"
             :key="note.id"
             class="note-card"
-            :class="{ selected: selectedNotes.includes(note.id), dragging: draggingNoteId === note.id }"
+            :class="{ selected: selectedNotes.includes(note.id), dragging: draggingNoteId === note.id, pinned: note.isPinned }"
             :style="{ animationDelay: `${index * 0.08}s` }"
             draggable="true"
             @click="toggleSelect(note.id)"
             @dragstart="handleDragStart($event, note)"
             @dragend="handleDragEnd"
           >
+            <!-- 置顶标识 -->
+            <div class="pin-badge" v-if="note.isPinned">
+              <span class="pin-icon">置顶</span>
+            </div>
+
+            <!-- 封面图 -->
+            <div class="card-cover" v-if="note.coverImage">
+              <img :src="note.coverImage" alt="封面" />
+            </div>
+
             <div class="card-checkbox" @click.stop>
               <input
                 type="checkbox"
@@ -98,6 +108,9 @@
                   </span>
                 </div>
                 <div class="card-actions" @click.stop>
+                  <button v-if="note.isPinned" class="action-btn unpin" @click="handleCancelPin(note.id)" title="取消置顶">
+                    取消置顶
+                  </button>
                   <button class="action-btn edit" @click="$router.push(`/note/${note.id}/edit`)" title="编辑">
                     ✎
                   </button>
@@ -261,6 +274,19 @@ const handleCreateNote = () => {
   router.push({ path: '/note/new', query })
 }
 
+const handleCancelPin = async (id) => {
+  try {
+    await ElMessageBox.confirm('确定要取消置顶吗？', '提示')
+    await noteApi.cancelNotePin(id)
+    ElMessage.success('已取消置顶')
+    fetchNotes()
+  } catch (error) {
+    if (error !== 'cancel') {
+      ElMessage.error('取消置顶失败')
+    }
+  }
+}
+
 const refreshCategorySidebar = () => {
   if (categorySidebar.value) {
     categorySidebar.value.fetchCategories()
@@ -406,9 +432,42 @@ onMounted(() => {
   transform: rotate(2deg) scale(1.02);
 }
 
+.note-card.pinned {
+  border: 2px solid var(--accent-primary);
+  background: linear-gradient(135deg, var(--bg-card), rgba(196, 112, 75, 0.05));
+}
+
 .note-card:hover {
   transform: translateY(-4px);
   box-shadow: var(--shadow-hover);
+}
+
+/* 置顶标识 */
+.pin-badge {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  background: var(--accent-primary);
+  color: white;
+  padding: 4px 10px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 600;
+  z-index: 1;
+}
+
+/* 封面图 */
+.card-cover {
+  width: 100%;
+  height: 140px;
+  overflow: hidden;
+  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+}
+
+.card-cover img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }
 
 .drag-indicator {
@@ -613,6 +672,20 @@ onMounted(() => {
 .action-btn.delete:hover {
   background: #f8d7da;
   color: #dc3545;
+}
+
+.action-btn.unpin {
+  width: auto;
+  padding: 4px 10px;
+  background: var(--accent-tertiary);
+  color: var(--accent-primary);
+  font-size: 11px;
+  border-radius: 4px;
+}
+
+.action-btn.unpin:hover {
+  background: var(--accent-primary);
+  color: white;
 }
 
 /* 空状态 */
